@@ -32,7 +32,7 @@ package object ocopy {
 
     def using[U1](path : T1 => U1)( conv : U1 => U2) : OCopyBuilder[T1,T2]  = macro OCopy.pushGetter[U1]
     def usingSelf( conv : T1 => U2 ) : OCopyBuilder[T1,T2]  = macro OCopy.pushSelfGetter
-    def to[U1](path : T1 => U1)( implicit conv : Converter[U1,U2]) : OCopyBuilder[T1,T2]  = macro OCopy.pushGetterImplicit[U1]
+    def from[U1](path : T1 => U1)(implicit conv : Converter[U1,U2]) : OCopyBuilder[T1,T2]  = macro OCopy.pushGetterImplicit[U1]
   }
 
   def transfer[T](from :T): OCopyBuilder[T, Any] = macro OCopy.createBuilder[T]
