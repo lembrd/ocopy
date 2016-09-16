@@ -1,4 +1,6 @@
 package org.lembrd
+import org.lembrd.ocopy.OCopy.Converter
+
 import scala.language.experimental.macros
 /**
   *
@@ -9,15 +11,11 @@ import scala.language.experimental.macros
 package object ocopy {
   import OCopy.Converter
 
-  object conversions {
-    implicit def selfConvert[A] : Converter[A, A] = new Converter[A, A] {
-      override def convert(o1: A): A = o1
-    }
-
-    implicit def optSomeConvert[A] : Converter[A, Option[A]] = new Converter[A, Option[A]] {
-      override def convert(o1: A): Option[A] = Some(o1)
-    }
+  implicit def selfConvert[A] : Converter[A, A] = new Converter[A, A] {
+    override def convert(o1: A): A = o1
   }
+
+  object conversions extends BaseConversions {}
 
   case class OCopyBuilder[T1,T2](from:T1, handler : T1 => T2) {
     def to[A] : OCopyBuilder[T1, A] = macro OCopy.assignTo[A]
@@ -36,5 +34,12 @@ package object ocopy {
   }
 
   def transfer[T](from :T): OCopyBuilder[T, Any] = macro OCopy.createBuilder[T]
+
+}
+
+trait BaseConversions {
+  implicit def optSomeConvert[A] : Converter[A, Option[A]] = new Converter[A, Option[A]] {
+    override def convert(o1: A): Option[A] = Some(o1)
+  }
 
 }

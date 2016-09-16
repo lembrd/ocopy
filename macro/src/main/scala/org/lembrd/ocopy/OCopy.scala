@@ -57,14 +57,7 @@ object OCopy {
     import c.universe._
     log("----- PUSH GETTER")
     val h = helper[c.type](c)
-    require(h.arrayBuffer.nonEmpty)
-    val tpe = weakTypeOf[U2]
-    val getter: h.SourceFieldGetter = h.SourceFieldGetter(Some(path), conv, tpe)
-    h.arrayBuffer.last match {
-      case setter : h.TargetFieldSetter => setter.getter = getter
-      case _ => sys.error("Unsequenced call getter, setter: " + getter)
-    }
-    h.push(getter)
+    h.pushGetter(h.SourceFieldGetter(Some(path), Some(conv), weakTypeOf[U2]))
 
     val ths = c.prefix
     q""" $ths.parentBuilder """
@@ -74,35 +67,37 @@ object OCopy {
     import c.universe._
     log("----- PUSH GETTER")
     val h = helper[c.type](c)
-    require(h.arrayBuffer.nonEmpty)
-
-    val getter: h.SourceFieldGetter = h.SourceFieldGetter(None, conv, h.inType)
-    h.arrayBuffer.last match {
-      case setter : h.TargetFieldSetter => setter.getter = getter
-      case _ => sys.error("Unsequenced call getter, setter: " + getter)
-    }
-    h.push(getter)
+    h.pushGetter(h.SourceFieldGetter(None, Some(conv), h.inType))
 
     val ths = c.prefix
     q""" $ths.parentBuilder """
   }
 
+
   def pushGetterImplicit[U2: c.WeakTypeTag](c :Context)(path : c.Tree)( conv : c.Tree) : c.Tree = {
     import c.universe._
-    log("----- PUSH GETTERimplicit")
+    log("\n\n----- PUSH GETTERimplicit")
     log("PATH: " + conv + " " + conv.getClass.getName)
     val h = helper[c.type](c)
-    require(h.arrayBuffer.nonEmpty)
 
     val tpe = weakTypeOf[U2]
+    val testQ = q"ocopy.this.`package`.selfConvert[$tpe]"
+
+    log(
+      s"""
+         |TREE Convert: $conv
+         |$testQ
+         |  EQUAL:${testQ.equalsStructure( conv)}""".stripMargin)
+
     val lt = TermName("x")
 
-    val getter: h.SourceFieldGetter = h.SourceFieldGetter(Some(path), q"($lt:$tpe) => $conv.convert($lt)", tpe)
-    h.arrayBuffer.last match {
-      case setter : h.TargetFieldSetter => setter.getter = getter
-      case _ => sys.error("Unsequenced call getter, setter: " + getter)
+    val getter = if ( testQ.equalsStructure( conv) ) {
+      h.SourceFieldGetter(Some(path), None, tpe)
+    } else {
+      h.SourceFieldGetter(Some(path), Some(q"($lt:$tpe) => $conv.convert($lt)"), tpe)
     }
-    h.push(getter)
+
+    h.pushGetter( getter )
 
     val ths = c.prefix
     q""" $ths.parentBuilder """
@@ -134,6 +129,14 @@ field4 = ((x: org.lembrd.ocopy.ClassOne) => new Complex2(x.field4_1, x.field4_2)
  */
 
   class Helper[C <: Context](val c: C) {
+    def pushGetter(getter: SourceFieldGetter) : Unit = {
+      require(arrayBuffer.nonEmpty)
+
+      arrayBuffer.last match {
+        case setter: TargetFieldSetter => setter.getter = getter
+        case _ => sys.error("Unsequenced call getter, setter: " + getter)
+      }
+    }
 
     import c.universe._
 
@@ -170,7 +173,7 @@ field4 = ((x: org.lembrd.ocopy.ClassOne) => new Complex2(x.field4_1, x.field4_2)
     }
 
     case class SourceFieldGetter(path : Option[c.Tree],
-                                 conv : c.Tree,
+                                 conv : Option[c.Tree],
                                  tpe : Type) extends Operation {
 
       override def toField : Field = {
@@ -195,6 +198,7 @@ field4 = ((x: org.lembrd.ocopy.ClassOne) => new Complex2(x.field4_1, x.field4_2)
     }
 
     case class Field(name: String, tpe: Type)
+
 
     def getCaseMethods(t: Type) = {
       t.members.toList.collect {
@@ -222,8 +226,6 @@ field4 = ((x: org.lembrd.ocopy.ClassOne) => new Complex2(x.field4_1, x.field4_2)
 
     def generateTarget(from: c.Tree, fromTpe : Type, toTpe : Type): c.Tree = {
 
-
-
       val sourceFields = getCaseMethods(fromTpe)
       val targetFields = getCaseMethods(toTpe)
 
@@ -241,26 +243,65 @@ field4 = ((x: org.lembrd.ocopy.ClassOne) => new Complex2(x.field4_1, x.field4_2)
       log("New Fields: " + newInTarget.mkString("\n"))
       log("Lost Fields: " + lostFromSource.mkString("\n"))
 
+      //c.inferImplicitValue()
+
+      def usingGetter(k:Field,  getter : SourceFieldGetter) = {
+
+        val tn = TermName(k.name)
+
+
+        getter.path.map( getterPath => {
+          getter.conv.map(convTree => {
+            q""" $tn =  $convTree( $getterPath( $from ) ) """
+          }).getOrElse{
+            q""" $tn =  $getterPath( $from ) """
+          }
+        }).getOrElse{
+          getter.conv.map(convTree => {
+            q""" $tn =  $convTree(  $from  ) """
+          }).getOrElse{
+            q""" $tn =  $from """
+          }
+
+        }
+      }
+
       val toSimpleCopy =
         targetFields.collect{
           case k if sourceFields.contains(k) && !setters.contains(k) =>
             val tn = TermName(k.name)
             q""" $tn = $from.$tn """
+
+          case k if sourceFields.exists(_.name == k.name) && !setters.contains(k) =>
+            // in this case we should try to find implicit from context
+            val fromField = sourceFields.find(_.name == k.name).head
+            val fromType = fromField.tpe
+
+            val cl = c.universe.rootMirror.staticClass("_root_.org.lembrd.ocopy.OCopy.Converter")
+            val converterType = c.universe.appliedType(cl, fromType, k.tpe)
+
+            //val typeToConvert = weakTypeOf[Converter[fromType, k.tpe]]
+
+            val cnv = c.inferImplicitValue(converterType,silent = true)
+            val tn = TermName(k.name)
+            if (cnv == EmptyTree) {
+
+              val qq = q"{ val x :${k.tpe} = $from.$tn }"
+              if (c.typecheck(qq,silent = true) == EmptyTree) {
+                sys.error(s"Can not found rule, how to convert: field:$k from $fromField")
+              } else {
+                log(s"\nImplicit found field:$k from $fromField : $cnv")
+                q""" $tn = $from.$tn """
+              }
+            } else {
+              log(s"\n\nConverter FOUND for field:$k from $fromField : $cnv")
+              q""" $tn = $cnv.convert( $from.$tn ) """
+            }
         }
 
       val newSetters = setters.map{
         case (k,v) =>
-          require(v.getter != null)
-
-          val conv = v.getter.conv
-          val tn = TermName(k.name)
-
-          v.getter.path.map( getter => {
-            q""" $tn =  $conv( $getter( $from ) ) """
-
-          }).getOrElse{
-            q""" $tn =  $conv(  $from  ) """
-          }
+          usingGetter(k, v.getter)
       }
 
       instantiateTarget(toTpe, toSimpleCopy ++ newSetters)
