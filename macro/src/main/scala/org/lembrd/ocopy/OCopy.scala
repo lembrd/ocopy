@@ -53,11 +53,25 @@ object OCopy {
     q"_root_.org.lembrd.ocopy.AssignBuilder($ths)"
   }
 
-  def pushGetter[U2: c.WeakTypeTag](c :Context)(path : c.Tree)( conv : c.Tree) : c.Tree = {
+  def pushConversionGetter[U2: c.WeakTypeTag](c :Context)(path : c.Tree)(conv : c.Tree) : c.Tree = {
     import c.universe._
     log("----- PUSH GETTER")
     val h = helper[c.type](c)
     h.pushGetter(h.SourceFieldGetter(Some(path), Some(conv), weakTypeOf[U2]))
+
+    val ths = c.prefix
+    q""" $ths.parentBuilder """
+  }
+
+  def pushPlainGetter(c :Context)(path : c.Tree) : c.Tree = {
+    import c.universe._
+    log("----- PUSH GETTER")
+    val h = helper[c.type](c)
+    val tpe = path match {
+      case func @Function(params, body) =>
+        func.tpe.typeArgs(1)
+    }
+    h.pushGetter(h.SourceFieldGetter(Some(path), None, tpe))
 
     val ths = c.prefix
     q""" $ths.parentBuilder """
@@ -248,7 +262,6 @@ field4 = ((x: org.lembrd.ocopy.ClassOne) => new Complex2(x.field4_1, x.field4_2)
       def usingGetter(k:Field,  getter : SourceFieldGetter) = {
 
         val tn = TermName(k.name)
-
 
         getter.path.map( getterPath => {
           getter.conv.map(convTree => {
