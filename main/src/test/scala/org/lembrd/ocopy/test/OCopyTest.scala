@@ -1,4 +1,5 @@
 package org.lembrd.ocopy.test
+import org.lembrd.ocopy.OCopyMacro.Converter
 import org.lembrd.ocopy._
 import org.lembrd.ocopy.conversions._
 import org.scalatest.{FlatSpec, Matchers}
@@ -13,11 +14,13 @@ import scala.util.Random
 class OCopyTest extends FlatSpec with Matchers {
 
   "OCopy" should "transfer complex classes" in {
-    val from = ClassOne(field1 =  "f1", field2 = "f2", field3 = Another("a","b"), field4_1 = 0.1d, field4_2 = 42, userId = Some(UserId(0)), f5 = 50)
+    val from = ClassOne(field1 =  "f1", field2 = "f2", field3 = Another("a","b"), field4_1 = 0.1d, field4_2 = 42, userId = UserId(0), f5 = 50)
     val mergeSource = ClassToBeMerged(mergedField = 113L)
 
     // implicit def conversion
-    implicit def userIdToLong(x:UserId) : Long = x.id
+    implicit def userIdToLong = new Converter[UserId, Long]{
+      override def convert(o1: UserId): Long = o1.id
+    }
 
     val to : ClassTwo = transfer(from)
       .to[ClassTwo]
@@ -61,7 +64,7 @@ case class ClassOne(field1      : String,
                     field3      : Another,
                     field4_1    : Double,
                     field4_2    : Int,
-                    userId      : Option[UserId],
+                    userId      : UserId,
                     f5          : Int
                    )
 case class ClassToBeMerged(

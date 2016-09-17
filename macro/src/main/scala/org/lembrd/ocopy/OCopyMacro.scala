@@ -23,7 +23,10 @@ object OCopyMacro {
   def createBuilder[T: c.WeakTypeTag](c :Context)(from: c.Tree) : c.Tree = {
     import c.universe._
     log("\n\n----- CREATE BUILDER")
-    val h = helper[c.type](c)
+    val h = new Helper[c.type](c)
+    Option(th.get()).foreach( x=> h.parent = x )
+    th.set(h)
+
     val tpe = weakTypeOf[T]
     h.inType = tpe
     h.fromTarget = from
@@ -177,17 +180,26 @@ object OCopyMacro {
 
   def generateBuilder(c:Context) : c.Tree = {
     val h = helper[c.type](c)
-    h.generate()
+    try {
+      h.generate()
+
+    } finally {
+      th.set(h.parent)
+    }
   }
 
-
   def helper[C <: Context](c : Context) : Helper[c.type] = {
+    val a = th.get().asInstanceOf[Helper[c.type]]
+    require(a != null, "Builder is not initialized")
+    a
+/*
     Option(th.get()).map( _.asInstanceOf[Helper[c.type]]).getOrElse{
       log("----- CREATE HELPER")
       val helper = new Helper[c.type](c)
       th.set(helper)
       helper
     }
+*/
   }
 
 
@@ -201,6 +213,8 @@ field4 = ((x: org.lembrd.ocopy.ClassOne) => new Complex2(x.field4_1, x.field4_2)
  */
 
   class Helper[C <: Context](val c: C) {
+    var parent : Helper[_ <: Context] = null
+
     var skipUndefinedFields : Boolean = false
 
     def pushGetter(getter: SourceFieldGetter) : Unit = {
