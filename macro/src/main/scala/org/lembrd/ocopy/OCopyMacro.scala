@@ -17,7 +17,7 @@ object OCopyMacro {
     th.get().skipUndefinedFields = true
   }
   def log(msg : String): Unit = {
-     println(Thread.currentThread().getId +" "+  msg)
+     //println(Thread.currentThread().getId +" "+  msg)
   }
   
   def createBuilder[T: c.WeakTypeTag](c :Context)(from: c.Tree) : c.Tree = {
