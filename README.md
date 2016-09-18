@@ -1,6 +1,21 @@
-# ocopy
-Object Fields Transfer
+# Object Fields Transfer (OCopy)
+[![Build Status](https://travis-ci.org/lembrd/ocopy.svg?branch=master)](https://travis-ci.org/lembrd/ocopy)
 
+
+This library simplify object's fields coping. For example you have 2 different case 
+classes: EntityObject and DataTransferObject. Each of them has independent set of fields 
+and you want to transparently transfer data from one object to another without 
+huge handwritten copy methods. 
+
+This library built on top of scala macros and requires **scala 2.11**
+
+## SBT
+```scala
+ resolvers += Resolver.bintrayRepo("lembrd", "maven")
+ libraryDependencies += "org.lembrd" %% "ocopy-lib" % "1.11"
+```
+
+## Use case
 ```scala
 class OCopyTest extends FlatSpec with Matchers {
 
