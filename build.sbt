@@ -3,7 +3,7 @@ import sbt.Keys._
 name := "ocopy"
 organization := "org.lembrd"
 scalaVersion := "2.11.8"
-val ver = "1.11"
+val ver = "1.12"
 
 val publishSettings = Seq(
   pomExtra := <scm>

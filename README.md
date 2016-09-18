@@ -1,6 +1,6 @@
 # Object Fields Transfer (OCopy)
 [![Build Status](https://travis-ci.org/lembrd/ocopy.svg?branch=master)](https://travis-ci.org/lembrd/ocopy)
-
+[ ![Download](https://api.bintray.com/packages/lembrd/maven/ocopy-lib/images/download.svg) ](https://bintray.com/lembrd/maven/ocopy-lib/_latestVersion)
 
 This library simplify object's fields coping. For example you have 2 different case 
 classes: EntityObject and DataTransferObject. Each of them has independent set of fields 
@@ -12,7 +12,7 @@ This library built on top of scala macros and requires **scala 2.11**
 ## SBT
 ```scala
  resolvers += Resolver.bintrayRepo("lembrd", "maven")
- libraryDependencies += "org.lembrd" %% "ocopy-lib" % "1.11"
+ libraryDependencies += "org.lembrd" %% "ocopy-lib" % "1.12"
 ```
 
 ## Use case
