@@ -10,6 +10,7 @@ val publishSettings = Seq(
   licenses += ("MIT", url("https://github.com/lembrd/ocopy/blob/master/LICENSE"))
 )
 
+
 lazy val macroProject = (project in file("macro")).settings(
   name := "ocopy-macro",
   organization := "org.lembrd",
