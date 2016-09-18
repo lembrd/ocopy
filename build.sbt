@@ -4,6 +4,11 @@ name := "ocopy"
 organization := "org.lembrd"
 scalaVersion := "2.11.8"
 
+val publishSettings = Seq(
+  publishMavenStyle := false,
+  publishArtifact in Test := false,
+  licenses += ("MIT", url("https://github.com/lembrd/ocopy/blob/master/LICENSE"))
+)
 
 lazy val macroProject = (project in file("macro")).settings(
   name := "ocopy-macro",

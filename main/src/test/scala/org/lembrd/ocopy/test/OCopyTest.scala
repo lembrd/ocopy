@@ -56,9 +56,6 @@ new org.lembrd.ocopy.test.ClassTwo(
 }
 
 
-
-
-
 case class ClassOne(field1      : String,
                     field2      : String,
                     field3      : Another,
