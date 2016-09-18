@@ -6,7 +6,18 @@ scalaVersion := "2.11.8"
 val ver = "1.10"
 
 val publishSettings = Seq(
-  publishMavenStyle := false,
+  pomExtra := <scm>
+    <url>https://github.com/lembrd/ocopy</url>
+    <connection>git@github.com:lembrd/ocopy.git</connection>
+  </scm>
+    <developers>
+      <developer>
+        <id>lembrd</id>
+        <name>Michael Shabunin</name>
+        <url>https://github.com/lembrd</url>
+      </developer>
+    </developers>,
+  publishMavenStyle := true,
   publishArtifact in Test := false,
   bintrayPackageLabels := Seq("ocopy-lib", "ocopy-macro"),
   licenses += ("MIT", url("http://opensource.org/licenses/MIT"))
